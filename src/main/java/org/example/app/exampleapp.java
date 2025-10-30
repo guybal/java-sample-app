@@ -12,13 +12,8 @@ public class exampleapp {
 	}
 
 	private static void greetMsg(){
-		String msg = "";
-		try{
-			msg = System.getenv("GREETING_MSG");
-		} catch (Exception e){
-			System.out.println("No env var called 'GREETING_MSG'");
-		}
-		if(msg != null && !msg.isEmpty()) {
+		String msg = System.getenv().getOrDefault("GREETING_MSG", "");
+		if(!msg.isEmpty()) {
 			System.out.println(msg);
 		}
 	}

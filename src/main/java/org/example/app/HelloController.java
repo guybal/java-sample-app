@@ -1,28 +1,37 @@
 package org.example.app;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
 public class HelloController {
 
-	@RequestMapping("/")
+	@GetMapping("/")
 	public String index() {
 		return "Hello World!";
 	}
 
+	@GetMapping("/welcome")
+	public String welcome() {
+		String message = System.getenv().getOrDefault("GREETING_MSG", "");
+		if (!message.isEmpty()) {
+			System.out.println(message);
+		}
+		return message;
+	}
 
-	@RequestMapping("/welcome")
-	public String welcome(){
-		String msg = "";
-		try{
-			msg = System.getenv("GREETING_MSG");
-		} catch (Exception e){
-			System.out.println("No env var called 'GREETING_MSG'");
-		}
-		if(msg != null && !msg.isEmpty()){
-			System.out.println(msg);
-		}
-		return msg;
+	@GetMapping("/coffee")
+	public String coffee() {
+		return "Coffee is ready!";
+	}
+
+	@GetMapping("/tea")
+	public String tea() {
+		return "Tea is ready!";
+	}
+
+	@GetMapping("/water")
+	public String water() {
+		return "Water is ready!";
 	}
 }
