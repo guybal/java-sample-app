@@ -1,5 +1,6 @@
 package org.example.app;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -8,16 +9,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @RestController
 @RequestMapping("/registry")
 public class RegistryController {
 
-	private final List<Transaction> transactions = new CopyOnWriteArrayList<>();
+	@Autowired
+	private TransactionService transactionService;
+
 	private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 	@PostMapping("/record")
@@ -26,8 +27,7 @@ public class RegistryController {
 			@RequestParam String drink,
 			@RequestParam double price) {
 		
-		Transaction transaction = new Transaction(name, drink, price, LocalDateTime.now());
-		transactions.add(transaction);
+		transactionService.addTransaction(name, drink, price);
 		
 		return ResponseEntity.ok("Transaction recorded successfully");
 	}
@@ -37,6 +37,9 @@ public class RegistryController {
 		// Load template
 		var resource = new ClassPathResource("registry-template.html");
 		String template = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+		
+		// Get transactions from service
+		List<Transaction> transactions = transactionService.getAllTransactions();
 		
 		// Calculate statistics
 		long totalTransactions = transactions.size();
@@ -88,18 +91,5 @@ public class RegistryController {
 			.replace("'", "&#39;");
 	}
 
-	private static class Transaction {
-		final String name;
-		final String drink;
-		final double price;
-		final LocalDateTime timestamp;
-
-		Transaction(String name, String drink, double price, LocalDateTime timestamp) {
-			this.name = name;
-			this.drink = drink;
-			this.price = price;
-			this.timestamp = timestamp;
-		}
-	}
 }
 

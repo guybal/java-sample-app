@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,21 +26,13 @@ public class HelloController {
 	@Value("${drink.image.water}")
 	private String waterImageBase64;
 
-	@Autowired(required = false)
-	private RestTemplate restTemplate;
+	@Autowired
+	private TransactionService transactionService;
 
 	// Drink prices
 	private static final double COFFEE_PRICE = 4.99;
 	private static final double TEA_PRICE = 2.99;
 	private static final double WATER_PRICE = 0.99;
-
-	// Initialize RestTemplate if not provided
-	private RestTemplate getRestTemplate() {
-		if (restTemplate == null) {
-			restTemplate = new RestTemplate();
-		}
-		return restTemplate;
-	}
 
 	private enum ColorPalette {
 		// Coffee palette - warm browns and dark tones (backgrounds)
@@ -164,9 +155,7 @@ public class HelloController {
 
 	private void registerTransaction(String name, String drink, double price) {
 		try {
-			String url = String.format("http://localhost:8080/registry/record?name=%s&drink=%s&price=%.2f",
-				name.replace(" ", "%20"), drink, price);
-			getRestTemplate().postForObject(url, null, String.class);
+			transactionService.addTransaction(name, drink, price);
 		} catch (Exception e) {
 			// Log error but don't fail the request if registry is unavailable
 			System.err.println("Failed to register transaction: " + e.getMessage());
