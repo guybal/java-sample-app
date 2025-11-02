@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Registry</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { margin-bottom: 30px; color: #ffffff; }
+        .stats { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .stat-card h3 { font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; color: #ffffff; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td { padding: 16px; text-align: left; }
+        th { background: rgba(255, 255, 255, 0.08); font-weight: 600; }
+        tr { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        tr:last-child { border-bottom: none; }
+        tr:hover { background: rgba(255, 255, 255, 0.04); }
+        .back-link { display: inline-block; margin-top: 30px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
+        .back-link:hover { color: #ffffff; }
+    </style>
+    <!--
+      Placeholders to be replaced server-side before returning the HTML:
+        - ${TOTAL_TRANSACTIONS}: total number of transactions
+        - ${TOTAL_REVENUE}: total revenue (formatted as $X.XX)
+        - ${COFFEE_COUNT}: number of coffee orders
+        - ${TEA_COUNT}: number of tea orders
+        - ${WATER_COUNT}: number of water orders
+        - ${TRANSACTION_ROWS}: HTML rows for all transactions (or empty message)
+    -->
+</head>
+<body>
+    <div class="container">
+        <h1>Transaction Registry</h1>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Transactions</h3>
+                <div class="value">${TOTAL_TRANSACTIONS}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Revenue</h3>
+                <div class="value">${TOTAL_REVENUE}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Coffee Orders</h3>
+                <div class="value">${COFFEE_COUNT}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Tea Orders</h3>
+                <div class="value">${TEA_COUNT}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Water Orders</h3>
+                <div class="value">${WATER_COUNT}</div>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Drink</th>
+                    <th>Price</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${TRANSACTION_ROWS}
+            </tbody>
+        </table>
+        <a href="/" class="back-link">← Back to Drinks Bar</a>
+    </div>
+</body>
+</html>
+

@@ -1,5 +1,6 @@
 package org.example.app;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
@@ -7,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +26,22 @@ public class HelloController {
 
 	@Value("${drink.image.water}")
 	private String waterImageBase64;
+
+	@Autowired(required = false)
+	private RestTemplate restTemplate;
+
+	// Drink prices
+	private static final double COFFEE_PRICE = 4.99;
+	private static final double TEA_PRICE = 2.99;
+	private static final double WATER_PRICE = 0.99;
+
+	// Initialize RestTemplate if not provided
+	private RestTemplate getRestTemplate() {
+		if (restTemplate == null) {
+			restTemplate = new RestTemplate();
+		}
+		return restTemplate;
+	}
 
 	private enum ColorPalette {
 		// Coffee palette - warm browns and dark tones (backgrounds)
@@ -99,59 +118,81 @@ public class HelloController {
 	}
 
 	@PostMapping(value = "/coffee", produces = MediaType.TEXT_HTML_VALUE)
-	public ResponseEntity<String> coffee() throws IOException {
+	public ResponseEntity<String> coffee(@RequestParam(defaultValue = "Guest") String name) throws IOException {
+		String displayName = name == null || name.trim().isEmpty() ? "Guest" : name.trim();
+		registerTransaction(displayName, "coffee", COFFEE_PRICE);
+		
+		String header = String.format("Hi %s!%nYour Coffee is ready!", displayName);
 		return ResponseEntity.ok(renderDrinkTemplate(
-			"Coffee is ready!", 
+			header, 
 			ColorPalette.COFFEE_DARK, 
 			ColorPalette.CREAM, 
-			coffeeImageBase64
+			coffeeImageBase64,
+			COFFEE_PRICE
 		));
 	}
 
 	@PostMapping(value = "/tea", produces = MediaType.TEXT_HTML_VALUE)
-	public ResponseEntity<String> tea() throws IOException {
+	public ResponseEntity<String> tea(@RequestParam(defaultValue = "Guest") String name) throws IOException {
+		String displayName = name == null || name.trim().isEmpty() ? "Guest" : name.trim();
+		registerTransaction(displayName, "tea", TEA_PRICE);
+		
+		String header = String.format("Hi %s!%nYour Tea is ready!", displayName);
 		return ResponseEntity.ok(renderDrinkTemplate(
-			"Tea is ready!", 
+			header, 
 			ColorPalette.TEA_FOREST, 
 			ColorPalette.MINT_WHITE, 
-			teaImageBase64
+			teaImageBase64,
+			TEA_PRICE
 		));
 	}
 
 	@PostMapping(value = "/water", produces = MediaType.TEXT_HTML_VALUE)
-	public ResponseEntity<String> water() throws IOException {
+	public ResponseEntity<String> water(@RequestParam(defaultValue = "Guest") String name) throws IOException {
+		String displayName = name == null || name.trim().isEmpty() ? "Guest" : name.trim();
+		registerTransaction(displayName, "water", WATER_PRICE);
+		
+		String header = String.format("Hi %s!%nYour Water is ready!", displayName);
 		return ResponseEntity.ok(renderDrinkTemplate(
-			"Water is ready!", 
+			header, 
 			ColorPalette.WATER_DEEP, 
 			ColorPalette.SKY_WHITE, 
-			waterImageBase64
+			waterImageBase64,
+			WATER_PRICE
 		));
 	}
 
-	private String renderDrinkTemplate(String header, ColorPalette bgColor, ColorPalette textColor, String base64Image) throws IOException {
-		return renderDrinkTemplate(header, bgColor.getHexValue(), textColor.getHexValue(), base64Image);
+	private void registerTransaction(String name, String drink, double price) {
+		try {
+			String url = String.format("http://localhost:8080/registry/record?name=%s&drink=%s&price=%.2f",
+				name.replace(" ", "%20"), drink, price);
+			getRestTemplate().postForObject(url, null, String.class);
+		} catch (Exception e) {
+			// Log error but don't fail the request if registry is unavailable
+			System.err.println("Failed to register transaction: " + e.getMessage());
+		}
 	}
 
-	private String renderDrinkTemplate(String header, ColorPalette bgColor, String textColor, String base64Image) throws IOException {
-		return renderDrinkTemplate(header, bgColor.getHexValue(), textColor, base64Image);
+	private String renderDrinkTemplate(String header, ColorPalette bgColor, ColorPalette textColor, String base64Image, double price) throws IOException {
+		return renderDrinkTemplate(header, bgColor.getHexValue(), textColor.getHexValue(), base64Image, price);
 	}
 
-	private String renderDrinkTemplate(String header, String bgColor, ColorPalette textColor, String base64Image) throws IOException {
-		return renderDrinkTemplate(header, bgColor, textColor.getHexValue(), base64Image);
-	}
-
-	private String renderDrinkTemplate(String header, String bgColor, String textColor, String base64Image) throws IOException {
+	private String renderDrinkTemplate(String header, String bgColor, String textColor, String base64Image, double price) throws IOException {
 		var resource = new ClassPathResource("drink-template.html");
 		var template = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
 		
 		// Construct the full data URL from base64 string
 		String imageDataUrl = buildImageDataUrl(base64Image);
 		
+		// Format header with line breaks
+		String formattedHeader = escapeHtml(header).replace("\n", "<br>");
+		
 		return template
-			.replace("${HEADER_TEXT}", escapeHtml(header))
+			.replace("${HEADER_TEXT}", formattedHeader)
 			.replace("${BG_COLOR}", bgColor)
 			.replace("${TEXT_COLOR}", textColor)
-			.replace("${BASE64_IMAGE}", imageDataUrl);
+			.replace("${BASE64_IMAGE}", imageDataUrl)
+			.replace("${PRICE}", String.format("$%.2f", price));
 	}
 
 	private String buildImageDataUrl(String base64String) {
