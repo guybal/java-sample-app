@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drinks Bar</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 36px 40px;
+            max-width: 520px;
+            width: 92vw;
+            text-align: center;
+        }
+        h1 {
+            margin: 0 0 12px 0;
+            font-size: 32px;
+            line-height: 1.2;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+        p {
+            margin: 0 0 28px 0;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        form {
+            margin: 0;
+        }
+        button {
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            letter-spacing: 0.2px;
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:focus {
+            outline: 2px solid rgba(255, 255, 255, 0.4);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Welcome to the Drinks Bar</h1>
+        <p>Please select your drink:</p>
+        
+        <div class="button-group">
+            <form action="/coffee" method="post">
+                <button type="submit">☕ Order Coffee</button>
+            </form>
+
+            <form action="/tea" method="post">
+                <button type="submit">🫖 Order Tea</button>
+            </form>
+
+            <form action="/water" method="post">
+                <button type="submit">💧 Order Water</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

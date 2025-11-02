@@ -1,0 +1,65 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "maven: clean test install",
+            "type": "shell",
+            "command": "mvn",
+            "args": [
+                "clean",
+                "test",
+                "install"
+            ],
+            "options": {
+                "env": {
+                    "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64",
+                    "PATH": "/usr/lib/jvm/java-21-openjdk-amd64/bin:${env:PATH}"
+                }
+            },
+            "problemMatcher": ["$maven"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+        ,
+        {
+            "label": "app: build and run jar (debug)",
+            "dependsOn": [
+                "maven: clean test install",
+                "app: run jar (debug)"
+            ],
+            "dependsOrder": "sequence"
+        },
+        
+        {
+            "label": "app: run jar (debug)",
+            "type": "shell",
+            "command": "java",
+            "args": [
+                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005",
+                "-jar",
+                "target/app-2.0.1.jar"
+            ],
+            "options": {
+                "env": {
+                    "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64",
+                    "PATH": "/usr/lib/jvm/java-21-openjdk-amd64/bin:${env:PATH}"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "terminate app: run jar (debug)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-lc",
+                "pkill -f 'org.example.app' || true"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
+
+
