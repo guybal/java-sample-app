@@ -2,7 +2,7 @@
 /target/
 /.idea/
 **/images/*
-
+/.vscode/
 # H2 Database files (development)
 data/
 *.db

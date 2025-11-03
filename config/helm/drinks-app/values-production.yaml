@@ -1,0 +1,66 @@
+# Production values for drinks-app
+# Use with: helm install drinks-app . -f values-production.yaml
+
+replicaCount: 3
+
+image:
+  repository: ghcr.io/your-username/java-sample-app  # Update with your GitHub username/repo
+  pullPolicy: Always
+  tag: "latest"  # or specific version like "2.0.1"
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+spring:
+  profiles:
+    active: prod
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Use validate in production after initial setup
+
+database:
+  external:
+    enabled: true
+    host: "your-production-postgres-host.com"
+    port: 5432
+    database: drinksdb
+    username: postgres
+    secretName: drinks-app-db-secret
+    # Note: Create the secret before deploying:
+    # kubectl create secret generic drinks-app-db-secret \
+    #   --from-literal=password='your-secure-password'
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: drinks-app.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: drinks-app-tls
+      hosts:
+        - drinks-app.yourdomain.com
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+

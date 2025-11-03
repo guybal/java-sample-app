@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "drinks-app.fullname" . }}
+  labels:
+    {{- include "drinks-app.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "drinks-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "drinks-app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "drinks-app.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.spring.profiles.active | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ include "drinks-app.databaseUrl" . | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ include "drinks-app.databaseUsername" . | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              {{- if and .Values.database.external.enabled .Values.database.external.secretName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.external.secretName }}
+                  key: {{ .Values.database.external.secretKey | default "password" }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "drinks-app.fullname" . }}-db-secret
+                  key: password
+              {{- end }}
+            - name: SPRING_APPLICATION_NAME
+              value: {{ .Values.spring.application.name | quote }}
+            - name: SERVER_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: SPRINGDOC_API_DOCS_PATH
+              value: {{ .Values.springdoc.api-docs.path | quote }}
+            - name: SPRINGDOC_SWAGGER_UI_PATH
+              value: {{ .Values.springdoc.swagger-ui.path | quote }}
+            - name: SPRINGDOC_SHOW_ACTUATOR
+              value: {{ .Values.springdoc.show-actuator | quote }}
+            - name: MANAGEMENT_ENDPOINTS_WEB_BASE_PATH
+              value: {{ .Values.management.endpoints.web.base-path | quote }}
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: {{ join "," .Values.management.endpoints.web.exposure.include | quote }}
+            - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+              value: {{ .Values.management.endpoint.health.show-details | quote }}
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: {{ .Values.spring.jpa.hibernate.ddl-auto | quote }}
+            - name: SPRING_JPA_SHOW_SQL
+              value: {{ .Values.spring.jpa.show-sql | quote }}
+            {{- range .Values.env }}
+            - {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

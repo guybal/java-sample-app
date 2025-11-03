@@ -6,7 +6,7 @@ name: Build and deploy JAR app to Azure Web App - az204-webapp-guyb
 on:
   push:
     branches:
-      - main
+      - qa
   workflow_dispatch:
 
 jobs:

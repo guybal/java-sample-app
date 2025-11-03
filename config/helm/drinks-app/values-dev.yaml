@@ -1,0 +1,52 @@
+# Development values for drinks-app
+# Use with: helm install drinks-app . -f values-dev.yaml
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-username/java-sample-app  # Update with your GitHub username/repo
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+spring:
+  profiles:
+    active: prod  # Still use prod for PostgreSQL, but with update mode
+  
+  jpa:
+    hibernate:
+      ddl-auto: update  # Auto-create/update schema in dev
+
+database:
+  external:
+    enabled: false
+  embedded:
+    enabled: true
+    image: postgres:18.0
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+ingress:
+  enabled: false
+
+logging:
+  level:
+    root: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+

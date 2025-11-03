@@ -1,0 +1,198 @@
+# Default values for drinks-app
+# This is a YAML-formatted file.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-username/java-sample-app  # Update with your GitHub username/repo
+  pullPolicy: IfNotPresent
+  tag: "latest"  # or specific version like "2.0.1"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: drinks-app.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Spring Boot Configuration
+spring:
+  profiles:
+    active: dev
+  
+  # Application properties
+  application:
+    name: drinks-app
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update  # Use 'validate' for production after initial setup
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  # Datasource Configuration (PostgreSQL)
+  datasource:
+    url: ""  # Will be set from database configuration below
+    driver-class-name: org.postgresql.Driver
+    username: ""  # Will be set from database configuration below
+    password: ""  # Will be set from database secret
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Database Configuration
+database:
+  # External PostgreSQL database (recommended for production)
+  external:
+    enabled: true
+    host: ""  # e.g., your-postgres-host.com
+    port: 5432
+    database: drinksdb
+    username: postgres
+    # Password should be set via database.secretName
+    secretName: drinks-app-db-secret
+    secretKey: password
+  
+  # Embedded PostgreSQL (for development/testing)
+  embedded:
+    enabled: false
+    database: drinksdb
+    image: postgres:18.0
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Server Configuration
+server:
+  port: 8080
+
+# Springdoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /docs
+  show-actuator: true
+  use-management-port: false
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Environment Variables
+env: []
+  # - name: CUSTOM_VAR
+  #   value: "custom-value"
+
+# Extra Volume Mounts
+extraVolumeMounts: []
+
+# Extra Volumes
+extraVolumes: []
+
+# Health Check Configuration
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Startup Probe (for slow-starting applications)
+startupProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8080
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+

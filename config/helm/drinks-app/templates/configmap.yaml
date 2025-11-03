@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "drinks-app.fullname" . }}-config
+  labels:
+    {{- include "drinks-app.labels" . | nindent 4 }}
+data:
+  application.yaml: |
+    server:
+      port: {{ .Values.server.port }}
+    
+    spring:
+      application:
+        name: {{ .Values.spring.application.name }}
+      
+      jpa:
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+        hibernate:
+          ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+        show-sql: ${SPRING_JPA_SHOW_SQL:false}
+        properties:
+          hibernate:
+            format_sql: false
+            jdbc:
+              batch_size: {{ .Values.spring.jpa.properties.hibernate.jdbc.batch_size }}
+            order_inserts: {{ .Values.spring.jpa.properties.hibernate.order_inserts }}
+            order_updates: {{ .Values.spring.jpa.properties.hibernate.order_updates }}
+      
+      datasource:
+        driver-class-name: {{ .Values.spring.datasource.driver-class-name }}
+        hikari:
+          maximum-pool-size: {{ .Values.spring.datasource.hikari.maximum-pool-size }}
+          minimum-idle: {{ .Values.spring.datasource.hikari.minimum-idle }}
+          connection-timeout: {{ .Values.spring.datasource.hikari.connection-timeout }}
+          idle-timeout: {{ .Values.spring.datasource.hikari.idle-timeout }}
+          max-lifetime: {{ .Values.spring.datasource.hikari.max-lifetime }}
+    
+    springdoc:
+      api-docs:
+        path: {{ .Values.springdoc.api-docs.path }}
+      swagger-ui:
+        path: {{ .Values.springdoc.swagger-ui.path }}
+      show-actuator: {{ .Values.springdoc.show-actuator }}
+      use-management-port: {{ .Values.springdoc.use-management-port }}
+    
+    management:
+      endpoints:
+        web:
+          base-path: {{ .Values.management.endpoints.web.base-path }}
+          exposure:
+            include: {{ join "," .Values.management.endpoints.web.exposure.include }}
+      endpoint:
+        health:
+          show-details: {{ .Values.management.endpoint.health.show-details }}
+    
+    logging:
+      level:
+        root: {{ .Values.logging.level.root }}
+        org.hibernate.SQL: {{ .Values.logging.level.org.hibernate.SQL }}
+        org.hibernate.type.descriptor.sql.BasicBinder: {{ .Values.logging.level.org.hibernate.type.descriptor.sql.BasicBinder }}
+

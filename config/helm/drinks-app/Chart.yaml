@@ -1,0 +1,16 @@
+apiVersion: v2
+name: drinks-app
+description: A Helm chart for Drinks App - Spring Boot application with PostgreSQL
+type: application
+version: 2.0.1
+appVersion: "2.0.1"
+keywords:
+  - spring-boot
+  - java
+  - postgresql
+maintainers:
+  - name: Guy Balmas
+home: https://github.com/guybal/java-sample-app
+sources:
+  - https://github.com/guybal/java-sample-app
+
