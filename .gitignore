@@ -2,3 +2,12 @@
 /target/
 /.idea/
 **/images/*
+
+# H2 Database files (development)
+data/
+*.db
+*.mv.db
+*.trace.db
+
+# Application logs
+*.log

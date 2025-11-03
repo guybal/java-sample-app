@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: drinks-app
+  
+  # PostgreSQL Database Configuration (Production)
+  # These values should be set via environment variables in Azure
+  # For local testing, set: DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/drinksdb}
+    driver-class-name: org.postgresql.Driver
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      # Use environment variable HIBERNATE_DDL_AUTO to control schema creation
+      # Options: update (auto-create/update), validate (only validate), none (no action)
+      # Default: update for local testing, set to 'validate' for production via env var
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}  # Default to 'update' for local testing
+    show-sql: ${SHOW_SQL:false}  # Set SHOW_SQL=true for debugging
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+logging:
+  level:
+    org.hibernate.SQL: ${HIBERNATE_SQL_LOG:WARN}  # Set to DEBUG for SQL logging
+    org.hibernate.type.descriptor.sql.BasicBinder: ${HIBERNATE_BINDER_LOG:WARN}
+    root: INFO
+
