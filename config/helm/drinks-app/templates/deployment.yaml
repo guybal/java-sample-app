@@ -62,21 +62,21 @@ spec:
             - name: SERVER_PORT
               value: {{ .Values.server.port | quote }}
             - name: SPRINGDOC_API_DOCS_PATH
-              value: {{ .Values.springdoc.api-docs.path | quote }}
+              value: {{ index .Values.springdoc "api-docs" "path" | quote }}
             - name: SPRINGDOC_SWAGGER_UI_PATH
-              value: {{ .Values.springdoc.swagger-ui.path | quote }}
+              value: {{ index .Values.springdoc "swagger-ui" "path" | quote }}
             - name: SPRINGDOC_SHOW_ACTUATOR
-              value: {{ .Values.springdoc.show-actuator | quote }}
+              value: {{ index .Values.springdoc "show-actuator" | quote }}
             - name: MANAGEMENT_ENDPOINTS_WEB_BASE_PATH
-              value: {{ .Values.management.endpoints.web.base-path | quote }}
+              value: {{ index .Values.management "endpoints" "web" "base-path" | quote }}
             - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
-              value: {{ join "," .Values.management.endpoints.web.exposure.include | quote }}
+              value: {{ join "," (index .Values.management "endpoints" "web" "exposure" "include") | quote }}
             - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
-              value: {{ .Values.management.endpoint.health.show-details | quote }}
+              value: {{ index .Values.management "endpoint" "health" "show-details" | quote }}
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-              value: {{ .Values.spring.jpa.hibernate.ddl-auto | quote }}
+              value: {{ index .Values.spring.jpa.hibernate "ddl-auto" | quote }}
             - name: SPRING_JPA_SHOW_SQL
-              value: {{ .Values.spring.jpa.show-sql | quote }}
+              value: {{ index .Values.spring.jpa "show-sql" | quote }}
             {{- range .Values.env }}
             - {{- toYaml . | nindent 12 }}
             {{- end }}
