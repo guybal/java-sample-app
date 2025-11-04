@@ -14,7 +14,11 @@ data:
         name: {{ .Values.spring.application.name }}
       
       jpa:
+        {{- if eq (.Values.spring.profiles.active | default "dev") "dev" }}
+        database-platform: org.hibernate.dialect.H2Dialect
+        {{- else }}
         database-platform: org.hibernate.dialect.PostgreSQLDialect
+        {{- end }}
         hibernate:
           ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
         show-sql: ${SPRING_JPA_SHOW_SQL:false}
@@ -26,36 +30,38 @@ data:
             order_inserts: {{ .Values.spring.jpa.properties.hibernate.order_inserts }}
             order_updates: {{ .Values.spring.jpa.properties.hibernate.order_updates }}
       
+      {{- if ne (.Values.spring.profiles.active | default "dev") "dev" }}
       datasource:
-        driver-class-name: {{ .Values.spring.datasource.driver-class-name }}
+        driver-class-name: {{ index .Values.spring.datasource "driver-class-name" }}
         hikari:
-          maximum-pool-size: {{ .Values.spring.datasource.hikari.maximum-pool-size }}
-          minimum-idle: {{ .Values.spring.datasource.hikari.minimum-idle }}
-          connection-timeout: {{ .Values.spring.datasource.hikari.connection-timeout }}
-          idle-timeout: {{ .Values.spring.datasource.hikari.idle-timeout }}
-          max-lifetime: {{ .Values.spring.datasource.hikari.max-lifetime }}
+          maximum-pool-size: {{ index .Values.spring.datasource.hikari "maximum-pool-size" }}
+          minimum-idle: {{ index .Values.spring.datasource.hikari "minimum-idle" }}
+          connection-timeout: {{ index .Values.spring.datasource.hikari "connection-timeout" }}
+          idle-timeout: {{ index .Values.spring.datasource.hikari "idle-timeout" }}
+          max-lifetime: {{ index .Values.spring.datasource.hikari "max-lifetime" }}
+      {{- end }}
     
     springdoc:
       api-docs:
-        path: {{ .Values.springdoc.api-docs.path }}
+        path: {{ index .Values.springdoc "api-docs" "path" }}
       swagger-ui:
-        path: {{ .Values.springdoc.swagger-ui.path }}
-      show-actuator: {{ .Values.springdoc.show-actuator }}
-      use-management-port: {{ .Values.springdoc.use-management-port }}
+        path: {{ index .Values.springdoc "swagger-ui" "path" }}
+      show-actuator: {{ index .Values.springdoc "show-actuator" }}
+      use-management-port: {{ index .Values.springdoc "use-management-port" }}
     
     management:
       endpoints:
         web:
-          base-path: {{ .Values.management.endpoints.web.base-path }}
+          base-path: {{ index .Values.management "endpoints" "web" "base-path" }}
           exposure:
-            include: {{ join "," .Values.management.endpoints.web.exposure.include }}
+            include: {{ join "," (index .Values.management "endpoints" "web" "exposure" "include") }}
       endpoint:
         health:
-          show-details: {{ .Values.management.endpoint.health.show-details }}
+          show-details: {{ index .Values.management "endpoint" "health" "show-details" }}
     
     logging:
       level:
         root: {{ .Values.logging.level.root }}
-        org.hibernate.SQL: {{ .Values.logging.level.org.hibernate.SQL }}
-        org.hibernate.type.descriptor.sql.BasicBinder: {{ .Values.logging.level.org.hibernate.type.descriptor.sql.BasicBinder }}
+        org.hibernate.SQL: {{ index .Values.logging.level "org.hibernate.SQL" }}
+        org.hibernate.type.descriptor.sql.BasicBinder: {{ index .Values.logging.level "org.hibernate.type.descriptor.sql.BasicBinder" }}
 

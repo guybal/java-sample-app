@@ -18,7 +18,7 @@ resources:
 
 spring:
   profiles:
-    active: prod  # Still use prod for PostgreSQL, but with update mode
+    active: dev  # Use dev profile for H2 embedded database
   
   jpa:
     hibernate:
@@ -26,20 +26,9 @@ spring:
 
 database:
   external:
-    enabled: false
+    enabled: false  # No external database needed
   embedded:
-    enabled: true
-    image: postgres:18.0
-    persistence:
-      enabled: true
-      size: 5Gi
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 250m
-        memory: 256Mi
+    enabled: false  # No embedded PostgreSQL - using H2 instead
 
 ingress:
   enabled: false

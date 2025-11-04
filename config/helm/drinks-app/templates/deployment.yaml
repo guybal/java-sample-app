@@ -41,6 +41,10 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: {{ .Values.spring.profiles.active | quote }}
+            {{- if eq (.Values.spring.profiles.active | default "dev") "dev" }}
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:h2:mem:drinksdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+            {{- else }}
             - name: SPRING_DATASOURCE_URL
               value: {{ include "drinks-app.databaseUrl" . | quote }}
             - name: SPRING_DATASOURCE_USERNAME
@@ -51,12 +55,15 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.database.external.secretName }}
                   key: {{ .Values.database.external.secretKey | default "password" }}
-              {{- else }}
+              {{- else if .Values.database.embedded.enabled }}
               valueFrom:
                 secretKeyRef:
                   name: {{ include "drinks-app.fullname" . }}-db-secret
                   key: password
+              {{- else }}
+              value: ""
               {{- end }}
+            {{- end }}
             - name: SPRING_APPLICATION_NAME
               value: {{ .Values.spring.application.name | quote }}
             - name: SERVER_PORT
@@ -77,6 +84,8 @@ spec:
               value: {{ index .Values.spring.jpa.hibernate "ddl-auto" | quote }}
             - name: SPRING_JPA_SHOW_SQL
               value: {{ index .Values.spring.jpa "show-sql" | quote }}
+            - name: SPRING_CONFIG_LOCATION
+              value: "classpath:/application.yaml,file:/config/application.yaml"
             {{- range .Values.env }}
             - {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -91,9 +100,18 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            - name: config
+              mountPath: /config
+            {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
+            {{- end }}
       volumes:
+        - name: config
+          configMap:
+            name: {{ include "drinks-app.fullname" . }}-config
+        {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

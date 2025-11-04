@@ -4,7 +4,9 @@ spring:
   
   # H2 Database Configuration (Development)
   datasource:
-    url: jdbc:h2:file:./data/drinks-db;AUTO_SERVER=TRUE
+    # Use in-memory database for Kubernetes (no file system access needed)
+    # For local development with persistence, use: jdbc:h2:file:./data/drinks-db;AUTO_SERVER=TRUE
+    url: jdbc:h2:mem:drinksdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password: 
