@@ -3,7 +3,7 @@ name: drinks-app
 description: A Helm chart for Drinks App - Spring Boot application with PostgreSQL
 type: application
 version: 0.0.1
-appVersion: "0.0.1"
+appVersion: "0.0.5"
 keywords:
   - spring-boot
   - java
