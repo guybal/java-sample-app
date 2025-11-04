@@ -15,7 +15,7 @@ This directory contains CI/CD workflows for the Drinks App.
 1. **Test**: Runs Maven tests
 2. **Build**: Builds JAR artifact
 3. **Docker Build & Push**: Builds and pushes Docker images to:
-   - GitHub Container Registry: `ghcr.io/your-username/java-sample-app`
+   - GitHub Container Registry: `ghcr.io/guybal/java-sample-app`
 
 ### 2. `docker-build-push.yml` - Docker Build Only
 **Triggers:**
@@ -65,9 +65,9 @@ After deployment, images will be available at:
 
 ### GitHub Container Registry
 ```
-docker pull ghcr.io/your-username/java-sample-app:latest
-docker pull ghcr.io/your-username/java-sample-app:2.0.1
-docker pull ghcr.io/your-username/java-sample-app:main
+docker pull ghcr.io/guybal/java-sample-app:latest
+docker pull ghcr.io/guybal/java-sample-app:2.0.1
+docker pull ghcr.io/guybal/java-sample-app:main
 ```
 
 **Note:** You may need to authenticate first:
@@ -81,7 +81,7 @@ Update `config/helm/drinks-app/values.yaml`:
 
 ```yaml
 image:
-  repository: ghcr.io/your-username/java-sample-app
+  repository: ghcr.io/guybal/java-sample-app
   pullPolicy: IfNotPresent
   tag: "latest"  # or specific version like "2.0.1"
 ```

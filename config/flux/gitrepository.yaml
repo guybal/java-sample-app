@@ -1,0 +1,16 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: drinks-app
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/guybal/java-sample-app
+  ref:
+    branch: main
+  secretRef:
+    name: helm-charts-repo-credentials
+  ignore: |
+    /*
+    !/config/helm

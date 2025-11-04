@@ -1,0 +1,29 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: drinks-app
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system  # Your bootstrap GitRepository
+    namespace: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: Flux Image Automation
+        email: flux-image-automation@users.noreply.github.com
+      messageTemplate: 'Update image tag for drinks-app: {{range .Updated.Images}}{{println .}}{{end}}'
+    push:
+      branch: main
+  update:
+    strategy: Setters
+    setters:
+      - marker: drinks-app
+        path: ./apps/drinks-app/helmrelease.yaml  # Adjust path to match your GitOps structure
+        value: ImagePolicy/drinks-app

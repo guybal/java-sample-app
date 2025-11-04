@@ -245,7 +245,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}
+            ghcr.io/${{ github.repository_owner }}/drinks-app
           tags: |
             type=raw,value=${{ needs.versioning.outputs.image_version }},enable=${{ github.event_name != 'pull_request' }}
             type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
@@ -276,7 +276,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+          tags: ghcr.io/${{ github.repository_owner }}/drinks-app:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -295,12 +295,12 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 GitHub Container Registry:" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: \`ghcr.io/${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: \`ghcr.io/${{ github.repository_owner }}/drinks-app\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: \`${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Pull Command:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository_owner }}/drinks-app:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   commit-and-tag:

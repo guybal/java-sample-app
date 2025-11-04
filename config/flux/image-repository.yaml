@@ -1,0 +1,11 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: drinks-app
+  namespace: flux-system
+spec:
+  image: ghcr.io/guybal/drinks-app
+  interval: 1m
+  secretRef:
+    name: ghcr-credentials

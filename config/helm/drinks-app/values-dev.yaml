@@ -4,7 +4,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/guybal/java-sample-app  # Update with your GitHub username/repo
+  repository: ghcr.io/guybal/drinks-app
   pullPolicy: IfNotPresent
   tag: "latest"
 

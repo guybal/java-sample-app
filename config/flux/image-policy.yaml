@@ -1,0 +1,12 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: drinks-app
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: drinks-app
+  policy:
+    semver:
+      range: '>=0.0.0'
