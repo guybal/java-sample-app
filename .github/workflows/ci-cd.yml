@@ -1,25 +1,162 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - main
-      - dev
+  # push:
+  #   branches:
+  #     - main
+  #     - dev
+  #   tags:
+  #     - 'v*'
+  # pull_request:
+  #   branches:
+  #     - main
+  #     - dev
   workflow_dispatch:
     inputs:
       version:
-        description: 'Image version tag (e.g., 2.0.1). Overrides auto-generated tags if provided.'
+        description: 'Explicit image version tag (e.g., 1.2.3). If provided, ignores bump_type.'
         required: false
         type: string
+      bump_type:
+        description: 'Auto-bump type: major, minor, or patch (default: patch)'
+        required: false
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      helm_only:
+        description: 'Build and push Helm chart only'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  test:
+  versioning:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      image_version: ${{ steps.version.outputs.image_version }}
+      chart_version: ${{ steps.version.outputs.chart_version }}
+      helm_changed: ${{ steps.version.outputs.helm_changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Check for Helm chart changes
+        id: helm-changes
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            config/helm/drinks-app/**
+
+      - name: Resolve and Update Versions
+        id: version
+        run: |
+          # Read current versions from Chart.yaml
+          if [ -f config/helm/drinks-app/Chart.yaml ]; then
+            CURRENT_IMAGE_VERSION=$(grep '^appVersion:' config/helm/drinks-app/Chart.yaml | cut -d' ' -f2 | tr -d '"' | tr -d "'")
+            CURRENT_CHART_VERSION=$(grep '^version:' config/helm/drinks-app/Chart.yaml | cut -d' ' -f2 | tr -d '"' | tr -d "'")
+          else
+            CURRENT_IMAGE_VERSION="0.0.1"
+            CURRENT_CHART_VERSION="0.0.1"
+          fi
+          
+          # Default to 0.0.1 if not found
+          if [ -z "$CURRENT_IMAGE_VERSION" ] || [ "$CURRENT_IMAGE_VERSION" = "" ]; then
+            CURRENT_IMAGE_VERSION="0.0.1"
+          fi
+          if [ -z "$CURRENT_CHART_VERSION" ] || [ "$CURRENT_CHART_VERSION" = "" ]; then
+            CURRENT_CHART_VERSION="0.0.1"
+          fi
+          
+          echo "Current image version: $CURRENT_IMAGE_VERSION"
+          echo "Current chart version: $CURRENT_CHART_VERSION"
+          
+          # Calculate new image version
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            # Use explicit version if provided
+            NEW_IMAGE_VERSION="${{ github.event.inputs.version }}"
+            echo "Using explicit image version: $NEW_IMAGE_VERSION"
+          else
+            # Auto-bump based on bump_type
+            BUMP_TYPE="${{ github.event.inputs.bump_type }}"
+            if [ -z "$BUMP_TYPE" ] || [ "$BUMP_TYPE" = "" ]; then
+              BUMP_TYPE="patch"
+            fi
+            
+            IFS='.' read -ra ADDR <<< "$CURRENT_IMAGE_VERSION"
+            MAJOR=${ADDR[0]:-0}
+            MINOR=${ADDR[1]:-0}
+            PATCH=${ADDR[2]:-0}
+            
+            case "$BUMP_TYPE" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch|*)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+            
+            NEW_IMAGE_VERSION="$MAJOR.$MINOR.$PATCH"
+            echo "Auto-bumped image version ($BUMP_TYPE): $CURRENT_IMAGE_VERSION -> $NEW_IMAGE_VERSION"
+          fi
+          
+          # Auto-bump chart version ONLY if helm files changed
+          HELM_CHANGED="${{ steps.helm-changes.outputs.any_changed }}"
+          if [ "$HELM_CHANGED" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            IFS='.' read -ra ADDR <<< "$CURRENT_CHART_VERSION"
+            CHART_MAJOR=${ADDR[0]:-0}
+            CHART_MINOR=${ADDR[1]:-0}
+            CHART_PATCH=${ADDR[2]:-0}
+            CHART_PATCH=$((CHART_PATCH + 1))
+            NEW_CHART_VERSION="$CHART_MAJOR.$CHART_MINOR.$CHART_PATCH"
+            echo "Auto-bumped chart version (patch): $CURRENT_CHART_VERSION -> $NEW_CHART_VERSION"
+          else
+            NEW_CHART_VERSION="$CURRENT_CHART_VERSION"
+            echo "Chart version unchanged (no helm files modified): $NEW_CHART_VERSION"
+          fi
+          
+          # Update Chart.yaml
+          if [ -f config/helm/drinks-app/Chart.yaml ]; then
+            sed -i "s/^appVersion:.*/appVersion: \"$NEW_IMAGE_VERSION\"/" config/helm/drinks-app/Chart.yaml
+            if [ "$HELM_CHANGED" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              sed -i "s/^version:.*/version: $NEW_CHART_VERSION/" config/helm/drinks-app/Chart.yaml
+            fi
+            echo "Updated Chart.yaml:"
+            cat config/helm/drinks-app/Chart.yaml
+          fi
+          
+          # Update pom.xml version
+          if [ -f pom.xml ]; then
+            # Update the version tag after artifactId
+            sed -i "/<artifactId>drinks-app<\/artifactId>/,/<version>/s|<version>.*</version>|<version>$NEW_IMAGE_VERSION</version>|" pom.xml || \
+            sed -i "s|<version>.*</version>|<version>$NEW_IMAGE_VERSION</version>|" pom.xml
+            echo "Updated pom.xml version to: $NEW_IMAGE_VERSION"
+            echo "pom.xml version section:"
+            grep -A 2 "<artifactId>drinks-app</artifactId>" pom.xml || grep -B 1 -A 1 "<version>" pom.xml | head -3
+          fi
+          
+          # Set outputs
+          echo "image_version=$NEW_IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "chart_version=$NEW_CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "helm_changed=$HELM_CHANGED" >> $GITHUB_OUTPUT
+          
+          # Note: Commits and tags are handled in helm-chart-build-push job
+
+  unit-tests:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,9 +188,9 @@ jobs:
           name: test-results
           path: target/surefire-reports/
 
-  build:
+  build-jar:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [unit-tests, versioning]
     permissions:
       contents: read
       packages: write
@@ -85,9 +222,9 @@ jobs:
           path: target/*.jar
           retention-days: 30
 
-  docker-build-push:
+  build-and-push-image:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build-jar, versioning]
     permissions:
       contents: read
       packages: write
@@ -115,14 +252,14 @@ jobs:
           images: |
             ghcr.io/${{ github.repository }}
           tags: |
+            type=raw,value=${{ needs.versioning.outputs.image_version }},enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+            type=semver,pattern={{version}},value=${{ needs.versioning.outputs.image_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.versioning.outputs.image_version }}
+            type=semver,pattern={{major}},value=${{ needs.versioning.outputs.image_version }}
 
       - name: Build and push Docker image to GitHub Container Registry
         if: github.event_name != 'pull_request'
@@ -169,5 +306,155 @@ jobs:
           echo "### 🚀 Pull Command:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  commit-and-tag:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-image, versioning, helm-chart-build-push]
+    if: always() && (needs.build-and-push-image.result == 'success' || needs.build-and-push-image.result == 'skipped')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Commit version changes and create tags
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          APP_VERSION="${{ needs.versioning.outputs.image_version }}"
+          CHART_VERSION="${{ needs.versioning.outputs.chart_version }}"
+          HELM_CHANGED="${{ needs.versioning.outputs.helm_changed }}"
+          
+          echo "App version: $APP_VERSION"
+          echo "Chart version: $CHART_VERSION"
+          echo "Helm changed: $HELM_CHANGED"
+          
+          # Check if Chart.yaml or pom.xml has changes
+          HAS_CHANGES=false
+          if ! git diff --quiet config/helm/drinks-app/Chart.yaml 2>/dev/null; then
+            git add config/helm/drinks-app/Chart.yaml
+            HAS_CHANGES=true
+          fi
+          if ! git diff --quiet pom.xml 2>/dev/null; then
+            git add pom.xml
+            HAS_CHANGES=true
+          fi
+          
+          if [ "$HAS_CHANGES" = "true" ]; then
+            git commit -m "chore: bump versions - app: $APP_VERSION, chart: $CHART_VERSION" || exit 0
+          else
+            echo "No version changes to commit"
+          fi
+          
+          # Create app version tag
+          APP_TAG="$APP_VERSION"
+          if git rev-parse "$APP_TAG" >/dev/null 2>&1; then
+            echo "Tag $APP_TAG already exists, skipping"
+          else
+            git tag -a "$APP_TAG" -m "Release version $APP_TAG"
+            echo "Created tag: $APP_TAG"
+          fi
+          
+          # Create helm version tag (only if chart version changed)
+          if [ "$HELM_CHANGED" = "true" ]; then
+            HELM_TAG="helm-$CHART_VERSION"
+            if git rev-parse "$HELM_TAG" >/dev/null 2>&1; then
+              echo "Tag $HELM_TAG already exists, skipping"
+            else
+              git tag -a "$HELM_TAG" -m "Helm chart version $CHART_VERSION"
+              echo "Created tag: $HELM_TAG"
+            fi
+          fi
+          
+          # Push commits and tags
+          git push || exit 0
+          git push --tags || exit 0
+
+      - name: Generate Commit and Tag Summary
+        run: |
+          echo "## 🏷️ Version Commit and Tags" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Versions:" >> $GITHUB_STEP_SUMMARY
+          echo "- **App Version**: \`${{ needs.versioning.outputs.image_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chart Version**: \`${{ needs.versioning.outputs.chart_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏷️ Git Tags Created:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ needs.versioning.outputs.image_version }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.versioning.outputs.helm_changed }}" = "true" ]; then
+            echo "- \`helm-${{ needs.versioning.outputs.chart_version }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  helm-chart-build-push:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-image, versioning]
+    permissions:
+      contents: write
+      packages: write
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch' && github.event.inputs.helm_only == 'true' ||
+        needs.versioning.outputs.helm_changed == 'true'
+      )
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Configure Helm OCI
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Extract Versions
+        id: versions
+        run: |
+          APP_VERSION="${{ needs.versioning.outputs.image_version }}"
+          CHART_VERSION="${{ needs.versioning.outputs.chart_version }}"
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "chart_version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $APP_VERSION"
+          echo "Chart version: $CHART_VERSION"
+
+      - name: Package Helm Chart
+        run: |
+          helm package config/helm/drinks-app --destination ./charts
+
+      - name: Push Helm Chart to GHCR
+        run: |
+          helm push ./charts/drinks-app-*.tgz oci://ghcr.io/${{ github.repository_owner }}/helm-charts
+          echo "Chart pushed to: ghcr.io/${{ github.repository_owner }}/helm-charts/drinks-app:${{ steps.versions.outputs.chart_version }}"
+
+      - name: Generate Helm Chart Summary
+        run: |
+          echo "## 📦 Helm Chart Built and Pushed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Chart Details:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Name**: \`drinks-app\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **App Version**: \`${{ steps.versions.outputs.app_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chart Version**: \`${{ steps.versions.outputs.chart_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: \`ghcr.io/${{ github.repository_owner }}/helm-charts\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Pull Command:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "helm pull oci://ghcr.io/${{ github.repository_owner }}/helm-charts/drinks-app --version ${{ steps.versions.outputs.chart_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 Add to HelmRelease:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`yaml" >> $GITHUB_STEP_SUMMARY
+          echo "chart:" >> $GITHUB_STEP_SUMMARY
+          echo "  spec:" >> $GITHUB_STEP_SUMMARY
+          echo "    chart: oci://ghcr.io/${{ github.repository_owner }}/helm-charts/drinks-app" >> $GITHUB_STEP_SUMMARY
+          echo "    version: ${{ steps.versions.outputs.chart_version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 

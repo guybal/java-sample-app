@@ -12,8 +12,8 @@
     </parent>
 
     <groupId>org.example</groupId>
-    <artifactId>app</artifactId>
-    <version>2.0.1</version>
+    <artifactId>drinks-app</artifactId>
+    <version>0.0.1</version>
 
     <properties>
         <java.version>21</java.version>

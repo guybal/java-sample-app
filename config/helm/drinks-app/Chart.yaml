@@ -2,8 +2,8 @@ apiVersion: v2
 name: drinks-app
 description: A Helm chart for Drinks App - Spring Boot application with PostgreSQL
 type: application
-version: 2.0.1
-appVersion: "2.0.1"
+version: 0.0.1
+appVersion: "0.0.1"
 keywords:
   - spring-boot
   - java
