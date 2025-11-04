@@ -315,6 +315,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Commit version changes and create tags
         run: |
@@ -329,19 +330,47 @@ jobs:
           echo "Chart version: $CHART_VERSION"
           echo "Helm changed: $HELM_CHANGED"
           
-          # Check if Chart.yaml or pom.xml has changes
+          # Apply version changes (since versioning job changes are in a different workspace)
           HAS_CHANGES=false
-          if ! git diff --quiet config/helm/drinks-app/Chart.yaml 2>/dev/null; then
-            git add config/helm/drinks-app/Chart.yaml
-            HAS_CHANGES=true
+          
+          # Update Chart.yaml
+          if [ -f config/helm/drinks-app/Chart.yaml ]; then
+            CURRENT_APP_VERSION=$(grep '^appVersion:' config/helm/drinks-app/Chart.yaml | cut -d' ' -f2 | tr -d '"' | tr -d "'")
+            if [ "$CURRENT_APP_VERSION" != "$APP_VERSION" ]; then
+              sed -i "s/^appVersion:.*/appVersion: \"$APP_VERSION\"/" config/helm/drinks-app/Chart.yaml
+              HAS_CHANGES=true
+              echo "Updated Chart.yaml appVersion to $APP_VERSION"
+            fi
+            
+            if [ "$HELM_CHANGED" = "true" ]; then
+              CURRENT_CHART_VERSION=$(grep '^version:' config/helm/drinks-app/Chart.yaml | cut -d' ' -f2 | tr -d '"' | tr -d "'")
+              if [ "$CURRENT_CHART_VERSION" != "$CHART_VERSION" ]; then
+                sed -i "s/^version:.*/version: $CHART_VERSION/" config/helm/drinks-app/Chart.yaml
+                HAS_CHANGES=true
+                echo "Updated Chart.yaml version to $CHART_VERSION"
+              fi
+            fi
           fi
-          if ! git diff --quiet pom.xml 2>/dev/null; then
-            git add pom.xml
-            HAS_CHANGES=true
+          
+          # Update pom.xml
+          if [ -f pom.xml ]; then
+            CURRENT_POM_VERSION=$(grep -A 2 "<artifactId>drinks-app</artifactId>" pom.xml | grep "<version>" | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d ' ')
+            if [ -z "$CURRENT_POM_VERSION" ]; then
+              CURRENT_POM_VERSION=$(grep "<version>" pom.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d ' ')
+            fi
+            
+            if [ "$CURRENT_POM_VERSION" != "$APP_VERSION" ]; then
+              sed -i "/<artifactId>drinks-app<\/artifactId>/,/<version>/s|<version>.*</version>|<version>$APP_VERSION</version>|" pom.xml || \
+              sed -i "s|<version>.*</version>|<version>$APP_VERSION</version>|" pom.xml
+              HAS_CHANGES=true
+              echo "Updated pom.xml version to $APP_VERSION"
+            fi
           fi
           
           if [ "$HAS_CHANGES" = "true" ]; then
+            git add config/helm/drinks-app/Chart.yaml pom.xml
             git commit -m "chore: bump versions - app: $APP_VERSION, chart: $CHART_VERSION" || exit 0
+            echo "Committed version changes"
           else
             echo "No version changes to commit"
           fi
@@ -367,8 +396,9 @@ jobs:
           fi
           
           # Push commits and tags
-          git push || exit 0
-          git push --tags || exit 0
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:${{ github.ref_name }} || exit 0
+          git push origin --tags || exit 0
 
       - name: Generate Commit and Tag Summary
         run: |
