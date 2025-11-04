@@ -26,11 +26,6 @@ on:
           - minor
           - major
         default: patch
-      helm_only:
-        description: 'Build and push Helm chart only'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   versioning:
